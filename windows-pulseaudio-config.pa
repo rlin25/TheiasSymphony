@@ -1,0 +1,28 @@
+# PulseAudio Configuration for Windows -> WSL Audio Bridge
+# Save this as: C:\pulseaudio\etc\pulse\default.pa
+
+# Load the native protocol module for network access
+load-module module-native-protocol-tcp listen=0.0.0.0 port=4713 auth-anonymous=1
+
+# Load Windows audio modules
+load-module module-waveout sink_name=output source_name=input
+load-module module-detect
+
+# Create a null sink for system audio capture
+load-module module-null-sink sink_name=virtual_sink sink_properties=device.description="Virtual_Sink"
+
+# Load loopback module to capture system audio
+# This captures whatever is playing on your speakers
+load-module module-loopback source=virtual_sink.monitor sink=virtual_sink latency_msec=50
+
+# Set default sink to virtual sink so all audio goes through it
+set-default-sink virtual_sink
+
+# Also create a loopback to your actual speakers so you can still hear audio
+load-module module-loopback source=virtual_sink.monitor sink=output latency_msec=50
+
+# Load the combine sink to duplicate audio
+load-module module-combine-sink sink_name=combined slaves=output,virtual_sink
+
+# Set the combined sink as default
+set-default-sink combined

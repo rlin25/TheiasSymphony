@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#1a1a2e"/>
+      <stop offset="100%" stop-color="#0f0f23"/>
+    </radialGradient>
+    <linearGradient id="wave1" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff0080"/>
+      <stop offset="25%" stop-color="#ff8000"/>
+      <stop offset="50%" stop-color="#80ff00"/>
+      <stop offset="75%" stop-color="#0080ff"/>
+      <stop offset="100%" stop-color="#8000ff"/>
+    </linearGradient>
+    <linearGradient id="wave2" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#ff8000"/>
+      <stop offset="25%" stop-color="#80ff00"/>
+      <stop offset="50%" stop-color="#0080ff"/>
+      <stop offset="75%" stop-color="#8000ff"/>
+      <stop offset="100%" stop-color="#ff0080"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="240" fill="url(#bg)" stroke="#333" stroke-width="8"/>
+  
+  <!-- Main waveform -->
+  <path d="M 64 256 Q 128 180 192 220 T 320 200 Q 384 240 448 256" 
+        fill="none" stroke="url(#wave1)" stroke-width="12" stroke-linecap="round"/>
+  
+  <!-- Secondary waveform -->
+  <path d="M 64 256 Q 128 320 192 280 T 320 300 Q 384 260 448 256" 
+        fill="none" stroke="url(#wave2)" stroke-width="8" stroke-linecap="round" opacity="0.7"/>
+  
+  <!-- Beat visualization circles -->
+  <circle cx="128" cy="200" r="8" fill="#ff0080" opacity="0.8"/>
+  <circle cx="256" cy="240" r="12" fill="#00ff80" opacity="0.9"/>
+  <circle cx="384" cy="280" r="6" fill="#8000ff" opacity="0.7"/>
+  
+  <!-- App name text -->
+  <text x="256" y="400" text-anchor="middle" fill="#ffffff" font-family="Arial, sans-serif" font-size="32" font-weight="bold" opacity="0.8">THEIAS</text>
+  <text x="256" y="440" text-anchor="middle" fill="#888888" font-family="Arial, sans-serif" font-size="20" opacity="0.6">SYMPHONY</text>
+</svg>

@@ -1,0 +1,62 @@
+{
+  "name": "theias_symphony",
+  "version": "1.0.0",
+  "description": "A cross-platform desktop music visualizer with minimalist waveform visualizations",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "electron",
+    "music",
+    "visualizer",
+    "audio",
+    "waveform"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^24.13.3"
+  },
+  "dependencies": {
+    "fftjs": "^0.0.4"
+  },
+  "build": {
+    "appId": "com.theias.symphony",
+    "productName": "Theias Symphony",
+    "directories": {
+      "output": "build"
+    },
+    "files": [
+      "main.js",
+      "renderer.js",
+      "index.html",
+      "style.css",
+      "audio/**/*",
+      "visualization/**/*",
+      "utils/**/*",
+      "assets/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    },
+    "mac": {
+      "target": "dmg",
+      "icon": "assets/icon.icns"
+    },
+    "linux": {
+      "target": "AppImage",
+      "icon": "assets/icon.svg",
+      "category": "AudioVideo",
+      "synopsis": "Music visualizer with real-time audio analysis"
+    }
+  }
+}
