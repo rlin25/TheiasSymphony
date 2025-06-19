@@ -3,12 +3,13 @@ const { ipcRenderer } = require('electron');
 console.log('ipcRenderer loaded successfully');
 
 // Import visualization modules - with error handling
-let WaveformRenderer, ColorCycling, BeatAnimations, BeatDetector, FrequencyAnalyzer, performanceMonitor, logger;
+let WaveformRenderer, ColorCycling, BeatAnimations, BeatDetector, FrequencyAnalyzer, VisualizationManager, performanceMonitor, logger;
 
 try {
     WaveformRenderer = require('./visualization/waveform.js');
     ColorCycling = require('./visualization/colorCycling.js');
     BeatAnimations = require('./visualization/animations.js');
+    VisualizationManager = require('./visualization/visualizationManager.js');
     BeatDetector = require('./audio/beatDetection.js');
     FrequencyAnalyzer = require('./audio/frequencyAnalysis.js');
     const helpers = require('./utils/helpers.js');
@@ -43,6 +44,7 @@ let colorCycling;
 let beatAnimations;
 let beatDetector;
 let frequencyAnalyzer;
+let visualizationManager;
 
 // Audio data
 let audioData = new Float32Array(1024);
@@ -99,9 +101,11 @@ function initializeElements() {
         sensitivity: document.getElementById('sensitivity'),
         colorSpeed: document.getElementById('colorSpeed'),
         smoothing: document.getElementById('smoothing'),
+        amplitude: document.getElementById('amplitude'),
         sensitivityValue: document.getElementById('sensitivity-value'),
         colorSpeedValue: document.getElementById('colorSpeed-value'),
         smoothingValue: document.getElementById('smoothing-value'),
+        amplitudeValue: document.getElementById('amplitude-value'),
         
         // Buttons
         fullscreenBtn: document.getElementById('fullscreenBtn'),
@@ -124,16 +128,15 @@ function initializeCanvas() {
 
 function initializeComponents() {
     try {
-        // Initialize visualization components
-        if (WaveformRenderer) {
-            waveformRenderer = new WaveformRenderer(canvas, {
-                style: 'minimalist',
-                lineWidth: 2,
-                glowEffect: true,
-                amplitude: 0.3
+        // Initialize visualization manager (replaces individual components)
+        if (VisualizationManager) {
+            visualizationManager = new VisualizationManager(canvas, {
+                transitionDuration: 300,
+                showVisualizationName: true
             });
         }
         
+        // Initialize color cycling
         if (ColorCycling) {
             colorCycling = new ColorCycling({
                 speed: 1.0,
@@ -144,6 +147,7 @@ function initializeComponents() {
             });
         }
         
+        // Initialize beat animations for effects
         if (BeatAnimations) {
             beatAnimations = new BeatAnimations(canvas, {
                 enableParticles: true,
@@ -224,6 +228,15 @@ function setupEventListeners() {
         }
     });
     
+    elements.amplitude.addEventListener('input', (e) => {
+        const value = parseFloat(e.target.value);
+        elements.amplitudeValue.textContent = e.target.value;
+        
+        if (visualizationManager) {
+            visualizationManager.setAmplitudeScale(value);
+        }
+    });
+    
     // Buttons
     elements.fullscreenBtn.addEventListener('click', toggleFullscreen);
     elements.hideControlsBtn.addEventListener('click', hideControls);
@@ -283,14 +296,17 @@ function handleAudioData(data) {
         
         audioData.set(buffer.slice(0, Math.min(buffer.length, audioData.length)));
         
-        // Amplify very small audio signals (microphone input is often very quiet)
+        // Apply reasonable amplification for microphone input (same as working renderer)
         let maxValue = 0;
         for (let i = 0; i < audioData.length; i++) {
-            audioData[i] = audioData[i] * 10000; // Amplify by 10000x for microphone input
+            audioData[i] = audioData[i] * 100; // 100x amplification (normal sensitivity)
             maxValue = Math.max(maxValue, Math.abs(audioData[i]));
         }
         
-        console.log(`Audio processing: max value after amplification: ${maxValue}, isAudioInitialized: ${isAudioInitialized}`);
+        // Debug occasionally
+        if (Math.random() < 0.01) {
+            console.log(`Audio processing: max value after amplification: ${maxValue}, isAudioInitialized: ${isAudioInitialized}`);
+        }
         
         // Force initialization if we have any audio data
         if (!isAudioInitialized) {
@@ -302,11 +318,31 @@ function handleAudioData(data) {
         }
         
         // Perform frequency analysis
-        lastAudioAnalysis = frequencyAnalyzer.analyze(audioData);
-        frequencyData.set(lastAudioAnalysis.frequencyData);
+        if (frequencyAnalyzer) {
+            lastAudioAnalysis = frequencyAnalyzer.analyze(audioData);
+            frequencyData.set(lastAudioAnalysis.frequencyData);
+        }
         
-        // Detect beats
-        lastBeatInfo = beatDetector.detectBeat(frequencyData);
+        // Simple beat detection (like working renderer)
+        let energy = 0;
+        for (let i = 0; i < audioData.length; i++) {
+            energy += audioData[i] * audioData[i];
+        }
+        energy = Math.sqrt(energy / audioData.length);
+        
+        lastBeatInfo = {
+            detected: energy > 0.05,
+            intensity: Math.min(energy * 0.5, 2.0),
+            energy: energy
+        };
+        
+        // Also use original beat detector if available
+        if (beatDetector && frequencyData.length > 0) {
+            const originalBeat = beatDetector.detectBeat(frequencyData);
+            if (originalBeat.detected) {
+                lastBeatInfo = originalBeat;
+            }
+        }
         
         isPlaying = true;
         
@@ -399,32 +435,30 @@ function startVisualization() {
         if (beatAnimations) {
             beatAnimations.update(deltaTime, lastBeatInfo, colorCycling ? colorCycling.getVisualizationColors() : getBasicColors());
         }
+        if (visualizationManager) {
+            visualizationManager.update(deltaTime);
+        }
         
         // Get current visualization data
         const colors = colorCycling ? colorCycling.getVisualizationColors() : getBasicColors();
-        const scale = beatAnimations ? beatAnimations.getCurrentScale() : 1.0;
         
-        // Clear canvas with pure black background
-        ctx.fillStyle = '#000000';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        
-        // Render waveform
-        if (waveformRenderer && frequencyData.length > 0) {
-            // Scale the waveform data for visualization
-            const scaledData = Array.from(frequencyData).map(val => (val / 255) * scale);
-            waveformRenderer.render(scaledData, colors, lastBeatInfo);
-        } else if (isPlaying && audioData.length > 0) {
-            // Draw basic waveform with available data
-            drawBasicWaveform();
+        // Use visualization manager if available, otherwise fallback to basic rendering
+        if (visualizationManager) {
+            // Simple approach: pass audio data if initialized, exactly like working renderer
+            const audioForViz = (isAudioInitialized && audioData) ? audioData : null;
+            const freqForViz = (isAudioInitialized && frequencyData) ? frequencyData : null;
+            visualizationManager.render(audioForViz, freqForViz, colors, lastBeatInfo);
         } else {
-            // Draw idle animation when no audio
-            drawIdleAnimation(colors);
+            // Fallback to basic rendering
+            ctx.fillStyle = '#000000';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (isPlaying && audioData.length > 0) {
+                drawBasicWaveform();
+            } else {
+                drawIdleAnimation(colors);
+            }
         }
-        
-        // Disable particle effects for cleaner look
-        // if (beatAnimations) {
-        //     beatAnimations.render();
-        // }
         
         // Update performance metrics
         performanceMonitor.endFrame();
@@ -623,7 +657,16 @@ function openAudioSettings() {
 }
 
 function handleKeydown(event) {
-    switch (event.key.toLowerCase()) {
+    const key = event.key.toLowerCase();
+    
+    // Let visualization manager handle its keys first
+    if (visualizationManager && (key === 'n' || key === 'p' || key === 'r' || 
+        event.key === 'ArrowRight' || event.key === 'ArrowLeft')) {
+        // Visualization manager handles these keys automatically
+        return;
+    }
+    
+    switch (key) {
         case 'h':
             event.preventDefault();
             toggleControls();
@@ -632,15 +675,15 @@ function handleKeydown(event) {
             event.preventDefault();
             toggleHelp();
             break;
-        case 'r':
-            event.preventDefault();
-            resetSettings();
-            break;
         case 'escape':
             if (!elements.controls.classList.contains('hidden')) {
                 hideControls();
                 event.preventDefault();
             }
+            break;
+        case 'c':
+            event.preventDefault();
+            resetSettings();
             break;
     }
 }
@@ -650,6 +693,7 @@ function resetSettings() {
         beatSensitivity: 0.7,
         colorCycleSpeed: 1.0,
         waveformSmoothing: 0.8,
+        amplitudeScale: 1.0,
         maxBeatScale: 3.0,
         frameRate: 60
     };
@@ -658,9 +702,11 @@ function resetSettings() {
     elements.sensitivity.value = defaultSettings.beatSensitivity;
     elements.colorSpeed.value = defaultSettings.colorCycleSpeed;
     elements.smoothing.value = defaultSettings.waveformSmoothing;
+    elements.amplitude.value = defaultSettings.amplitudeScale;
     elements.sensitivityValue.textContent = defaultSettings.beatSensitivity;
     elements.colorSpeedValue.textContent = defaultSettings.colorCycleSpeed;
     elements.smoothingValue.textContent = defaultSettings.waveformSmoothing;
+    elements.amplitudeValue.textContent = defaultSettings.amplitudeScale;
     
     // Update components
     if (beatDetector) {
@@ -678,6 +724,9 @@ function resetSettings() {
     if (beatAnimations) {
         beatAnimations.setMaxScale(defaultSettings.maxBeatScale);
     }
+    if (visualizationManager) {
+        visualizationManager.setAmplitudeScale(defaultSettings.amplitudeScale);
+    }
     
     logger.info('Settings reset to defaults');
 }
@@ -689,6 +738,9 @@ window.addEventListener('beforeunload', () => {
     }
     
     // Reset components
+    if (visualizationManager) {
+        visualizationManager.cleanup();
+    }
     if (beatAnimations) {
         beatAnimations.reset();
     }

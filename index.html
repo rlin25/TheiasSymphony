@@ -30,6 +30,11 @@
                     <input type="range" id="smoothing" min="0.1" max="1.0" step="0.1" value="0.8">
                     <span id="smoothing-value">0.8</span>
                 </div>
+                <div class="control-group">
+                    <label for="amplitude">Amplitude Scale:</label>
+                    <input type="range" id="amplitude" min="0.1" max="3.0" step="0.1" value="1.0">
+                    <span id="amplitude-value">1.0</span>
+                </div>
                 <div class="control-buttons">
                     <button id="fullscreenBtn">Toggle Fullscreen (F11)</button>
                     <button id="hideControlsBtn">Hide Controls (H)</button>
@@ -85,12 +90,18 @@
                 <li><kbd>ESC</kbd> - Exit fullscreen</li>
                 <li><kbd>H</kbd> - Show/hide controls</li>
                 <li><kbd>?</kbd> - Show/hide this help</li>
-                <li><kbd>R</kbd> - Reset to defaults</li>
+                <li><kbd>C</kbd> - Reset to defaults</li>
+            </ul>
+            <h4>Visualization Controls</h4>
+            <ul>
+                <li><kbd>N</kbd> or <kbd>→</kbd> - Next visualization</li>
+                <li><kbd>P</kbd> or <kbd>←</kbd> - Previous visualization</li>
+                <li><kbd>R</kbd> - Random visualization</li>
             </ul>
             <p>Press <kbd>?</kbd> again to hide this help.</p>
         </div>
     </div>
 
-    <script src="working-renderer.js"></script>
+    <script src="renderer.js"></script>
 </body>
 </html>
